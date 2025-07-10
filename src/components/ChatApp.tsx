@@ -876,6 +876,17 @@ export function ChatApp() {
           </div>
         </div>
         <div className="flex gap-1 md:gap-2 flex-shrink-0">
+          {(chatState === "waiting" || chatState === "searching") && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setShowVipModal(true)}
+              className="text-xs md:text-sm bg-yellow-500 hover:bg-yellow-600 text-white border-0"
+            >
+              <Zap className="h-3 w-3 md:h-4 md:w-4 mr-1" />
+              VIP
+            </Button>
+          )}
           {chatState === "connected" && (
             <Button variant="stop" size="sm" onClick={handleDisconnect} className="text-xs md:text-sm">
               <X className="h-3 w-3 md:h-4 md:w-4 mr-1" />
