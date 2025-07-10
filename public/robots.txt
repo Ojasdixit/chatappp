@@ -8,7 +8,7 @@ Disallow: /*.json$
 Disallow: /*.xml$
 
 # Sitemap
-Sitemap: https://instant-text-buddies.vercel.app/sitemap.xml
+Sitemap: https://freeindianchat.freshcart.fun/sitemap.xml
 
 # Crawl-delay: 10
 
