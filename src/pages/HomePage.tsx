@@ -9,10 +9,13 @@ export default function HomePage() {
           <div className="text-2xl font-bold">
             <span className="text-blue-400">Connect</span>Chat
           </div>
-          <div className="hidden md:flex space-x-8">
+          <div className="hidden md:flex items-center space-x-8">
             <a href="#features" className="hover:text-blue-400 transition">Features</a>
             <a href="#how-it-works" className="hover:text-blue-400 transition">How It Works</a>
             <a href="#safety" className="hover:text-blue-400 transition">Safety</a>
+            <Link to="/blog" className="hover:text-blue-400 transition font-medium">
+              Blog
+            </Link>
           </div>
           <Link 
             to="/" 

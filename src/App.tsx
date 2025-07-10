@@ -11,6 +11,7 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfUse from "./pages/TermsOfUse";
 import CommunityGuidelines from "./pages/CommunityGuidelines";
 import ContactUs from "./pages/ContactUs";
+import BlogHomePage from "./pages/BlogHomePage";
 
 const queryClient = new QueryClient();
 
@@ -42,6 +43,7 @@ const App = () => (
           <Route path="/terms" element={<TermsOfUse />} />
           <Route path="/community-guidelines" element={<CommunityGuidelines />} />
           <Route path="/contact" element={<ContactUs />} />
+          <Route path="/blog" element={<BlogHomePage />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
