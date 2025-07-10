@@ -181,12 +181,6 @@ export default function HomePage() {
           <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
             Join thousands of users having meaningful conversations right now.
           </p>
-          <Link 
-            to="/chat" 
-            className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-lg text-lg font-semibold transition"
-          >
-            Start Chatting Now - It's Free
-          </Link>
         </div>
       </section>
 
