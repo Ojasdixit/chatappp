@@ -197,11 +197,11 @@ export default function HomePage() {
             <div className="text-xl font-bold mb-4 md:mb-0">
               <span className="text-blue-400">Connect</span>Chat
             </div>
-            <div className="flex space-x-6">
-              <a href="#" className="text-gray-400 hover:text-white transition">Terms of Service</a>
-              <a href="#" className="text-gray-400 hover:text-white transition">Privacy Policy</a>
-              <a href="#" className="text-gray-400 hover:text-white transition">Community Guidelines</a>
-              <a href="#" className="text-gray-400 hover:text-white transition">Contact Us</a>
+            <div className="flex flex-wrap justify-center gap-4 md:gap-6">
+              <Link to="/terms" className="text-gray-400 hover:text-white transition">Terms of Service</Link>
+              <Link to="/privacy-policy" className="text-gray-400 hover:text-white transition">Privacy Policy</Link>
+              <Link to="/community-guidelines" className="text-gray-400 hover:text-white transition">Community Guidelines</Link>
+              <Link to="/contact" className="text-gray-400 hover:text-white transition">Contact Us</Link>
             </div>
           </div>
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-500 text-sm">
