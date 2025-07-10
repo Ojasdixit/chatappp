@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { MessageCircle, Send, Zap, Users, X, UserPlus, LogOut } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { VipUpgradeModal } from "./VipUpgradeModal";
 
 interface Message {
   id: string;
@@ -27,8 +28,24 @@ export function ChatApp() {
   const [roomId, setRoomId] = useState("");
   const [searchingDots, setSearchingDots] = useState("");
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [showVipModal, setShowVipModal] = useState(false);
+  const [vipTimer, setVipTimer] = useState<NodeJS.Timeout | null>(null);
+  const [chatCount, setChatCount] = useState(0);
+  const [gender, setGender] = useState<'' | 'male' | 'female' | 'other'>('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  // Increment chat count
+  const incrementChatCount = () => {
+    setChatCount(prev => {
+      const newCount = prev + 1;
+      // Save to localStorage to persist across page refreshes
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chatCount', newCount.toString());
+      }
+      return newCount;
+    });
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -259,28 +276,61 @@ export function ChatApp() {
     }
   }, [chatState, roomId, sessionId, partnerUsername]);
 
-  // Clean up search timeout on unmount
+  // Load chat count from localStorage on component mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedChatCount = localStorage.getItem('chatCount');
+      if (savedChatCount) {
+        setChatCount(parseInt(savedChatCount, 10));
+      }
+    }
+  }, []);
+
+  // Clean up timeouts on unmount
   useEffect(() => {
     return () => {
       if (searchTimeout) {
         clearTimeout(searchTimeout);
       }
+      if (vipTimer) {
+        clearTimeout(vipTimer);
+      }
     };
-  }, [searchTimeout]);
+  }, [searchTimeout, vipTimer]);
+
+  // Track chat count and show VIP popup
+  useEffect(() => {
+    if (chatState === 'connected') {
+      clearVipTimer();
+    } else if (chatState === 'waiting') {
+      // Show VIP popup after every 10 chats
+      if (chatCount > 0 && chatCount % 10 === 0) {
+        setShowVipModal(true);
+      }
+      startVipTimer();
+    }
+    return () => clearVipTimer();
+  }, [chatState, chatCount]);
 
   const handleLogin = async () => {
-    if (username.trim().length >= 2) {
-      const newSessionId = `session_${Date.now()}_${Math.random()}`;
+    if (username.trim().length >= 2 && gender) {
+      const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       setSessionId(newSessionId);
       
       // Create user session in database
       const { error } = await supabase
         .from('user_sessions')
-        .insert({
-          username: username.trim(),
-          session_id: newSessionId,
-          status: 'waiting'
-        });
+        .insert([
+          { 
+            session_id: newSessionId, 
+            username: username.trim(),
+            gender: gender,
+            status: 'waiting',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            is_vip: false
+          }
+        ]);
 
       if (error) {
         toast({
@@ -347,14 +397,31 @@ export function ChatApp() {
 
       if (updateError) throw updateError;
 
-      // Look for users who are already searching (status = 'connecting')
-      const { data: searchingUsers, error: searchError } = await supabase
+      // First, try to find an opposite gender match
+      const { data: oppositeGenderUsers, error: oppositeGenderError } = await supabase
         .from('user_sessions')
         .select('*')
         .eq('status', 'connecting')
         .neq('session_id', sessionId)
+        .neq('gender', gender) // Look for opposite gender
         .order('updated_at', { ascending: true })
         .limit(1);
+
+      // If no opposite gender found, look for any available user
+      const searchQuery = oppositeGenderUsers?.length 
+        ? oppositeGenderUsers 
+        : await supabase
+            .from('user_sessions')
+            .select('*')
+            .eq('status', 'connecting')
+            .neq('session_id', sessionId)
+            .order('updated_at', { ascending: true })
+            .limit(1);
+
+      const searchingUsers = oppositeGenderUsers?.length 
+        ? oppositeGenderUsers 
+        : searchQuery.data;
+      const searchError = oppositeGenderError || searchQuery.error;
 
       if (searchError) throw searchError;
 
@@ -485,8 +552,35 @@ export function ChatApp() {
   };
 
   // Handle disconnection when user clicks the stop button
+  // Show VIP upgrade modal after 5 minutes
+  const startVipTimer = () => {
+    // Clear any existing timer
+    if (vipTimer) {
+      clearTimeout(vipTimer);
+    }
+    
+    // Set new timer for 5 minutes
+    const timer = setTimeout(() => {
+      setShowVipModal(true);
+    }, 5 * 60 * 1000); // 5 minutes in milliseconds
+    
+    setVipTimer(timer);
+  };
+
+  // Clear VIP timer when component unmounts or when starting a new chat
+  const clearVipTimer = () => {
+    if (vipTimer) {
+      clearTimeout(vipTimer);
+      setVipTimer(null);
+    }
+  };
+
   const handleDisconnect = async () => {
     try {
+      // Increment chat count when chat ends
+      incrementChatCount();
+      // Start the VIP timer when chat ends
+      startVipTimer();
       const roomIdToEnd = roomId;
       if (!roomIdToEnd) {
         // If no room ID, just reset the UI
@@ -667,13 +761,94 @@ export function ChatApp() {
               className="text-center"
               maxLength={20}
             />
+            <div className="mb-4">
+              <label className="block mb-2">I am a:</label>
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div className={`flex items-center p-3 border rounded-lg ${gender === 'male' ? 'border-blue-500' : 'border-gray-200 dark:border-gray-700'}`}>
+                  <input
+                    type="radio"
+                    id="male-radio"
+                    name="gender"
+                    value="male"
+                    checked={gender === 'male'}
+                    onChange={() => setGender('male')}
+                    className="h-4 w-4 cursor-pointer"
+                  />
+                  <label htmlFor="male-radio" className="ml-2 cursor-pointer">
+                    <div className="font-medium">Male</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">Connect with anyone</div>
+                  </label>
+                </div>
+                <div className={`flex items-center p-3 border rounded-lg ${gender === 'female' ? 'border-pink-500' : 'border-gray-200 dark:border-gray-700'}`}>
+                  <input
+                    type="radio"
+                    id="female-radio"
+                    name="gender"
+                    value="female"
+                    checked={gender === 'female'}
+                    onChange={() => setGender('female')}
+                    className="h-4 w-4 cursor-pointer"
+                  />
+                  <label htmlFor="female-radio" className="ml-2 cursor-pointer">
+                    <div className="font-medium">Female</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">Connect with anyone</div>
+                  </label>
+                </div>
+                <div className={`flex items-center p-3 border rounded-lg ${gender === 'other' ? 'border-purple-500' : 'border-gray-200 dark:border-gray-700'}`}>
+                  <input
+                    type="radio"
+                    id="other-radio"
+                    name="gender"
+                    value="other"
+                    checked={gender === 'other'}
+                    onChange={() => setGender('other')}
+                    className="h-4 w-4 cursor-pointer"
+                  />
+                  <label htmlFor="other-radio" className="ml-2 cursor-pointer">
+                    <div className="font-medium">Other</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">Connect with anyone</div>
+                  </label>
+                </div>
+                <div 
+                  className="p-3 border border-yellow-400 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 cursor-pointer hover:bg-yellow-100 dark:hover:bg-yellow-800/30 transition-colors"
+                  onClick={() => setShowVipModal(true)}
+                >
+                  <div className="flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-yellow-600 dark:text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M5 5a3 3 0 015-2.236A3 3 0 0114.83 6H16a2 2 0 110 4h-5V9a1 1 0 10-2 0v1H4a2 2 0 110-4h1.17C5.06 5.687 5 5.35 5 5zm4 1V5a1 1 0 10-1 1h1zm3 0a1 1 0 10-1-1v1h1z" clipRule="evenodd" />
+                      <path d="M9 11H3v5a2 2 0 002 2h4v-7zM11 18h4a2 2 0 002-2v-5h-6v7z" />
+                    </svg>
+                    <div>
+                      <div className="font-medium text-yellow-700 dark:text-yellow-300">VIP: Connect with Girls</div>
+                      <div className="text-xs text-yellow-600 dark:text-yellow-400">Upgrade to VIP to connect only with girls</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
             <Button 
               onClick={handleLogin} 
+              className="w-full mb-3" 
+              size="lg"
+              disabled={username.trim().length < 2 || !gender}
+            >
+              Start Private Chat
+            </Button>
+            <Button 
+              variant="outline"
               className="w-full" 
               size="lg"
-              disabled={username.trim().length < 2}
+              asChild
             >
-              Start Chatting
+              <a 
+                href="https://indianchatrooms.freshcart.fun/public-rooms" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center justify-center"
+              >
+                <Users className="w-4 h-4 mr-2" />
+                Enter Public Chat Rooms
+              </a>
             </Button>
           </div>
         </Card>
@@ -842,6 +1017,11 @@ export function ChatApp() {
           {chatState === "connected" && "Press Enter to send • Maximum 500 characters"}
         </p>
       </div>
+      
+      {/* VIP Upgrade Modal */}
+      {showVipModal && (
+        <VipUpgradeModal onClose={() => setShowVipModal(false)} />
+      )}
     </div>
   );
 }
