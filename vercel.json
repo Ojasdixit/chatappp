@@ -1,0 +1,22 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    }
+  ],
+  "routes": [
+    { "handle": "filesystem" },
+    { "src": "/home", "dest": "/index.html" },
+    { "src": "/privacy-policy", "dest": "/index.html" },
+    { "src": "/terms", "dest": "/index.html" },
+    { "src": "/community-guidelines", "dest": "/index.html" },
+    { "src": "/contact", "dest": "/index.html" },
+    { "src": "/verify", "dest": "/index.html" },
+    { "src": "/(.*)", "dest": "/index.html" }
+  ]
+}
