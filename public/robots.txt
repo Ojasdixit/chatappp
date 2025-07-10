@@ -1,13 +1,32 @@
+User-agent: *
+Allow: /
+Disallow: /api/*
+Disallow: /admin/*
+Disallow: /private/*
+Disallow: /*?*
+Disallow: /*.json$
+Disallow: /*.xml$
+
+# Sitemap
+Sitemap: https://instant-text-buddies.vercel.app/sitemap.xml
+
+# Crawl-delay: 10
+
+# Allow all major search engines
 User-agent: Googlebot
 Allow: /
 
 User-agent: Bingbot
 Allow: /
 
-User-agent: Twitterbot
+User-agent: DuckDuckBot
 Allow: /
 
-User-agent: facebookexternalhit
+User-agent: Baiduspider
+Allow: /
+
+User-agent: YandexBot
+Allow: /
 Allow: /
 
 User-agent: *
